@@ -134,7 +134,7 @@ for device in config["dashcam"]["capture"]["video"]["devices"]: # Iterate throug
 frames_to_write = {}
 for device in config["dashcam"]["capture"]["video"]["devices"]: # Iterate through each device in the configuration.
     if (config["dashcam"]["capture"]["video"]["devices"][device]["enabled"] == True):
-        frames_to_write[device] = [] # Add this device to the frame buffer.
+        frames_to_write[device] = None # Add this device to the frame buffer.
 
 segments_saved_time = {} # This is a dictionary that holds a list of the dashcam segments that have been saved, and the time that they were saved.
 instant_framerate = {} # This will hold the instantaneous frame-rate of each device, which is calculated based on the time between the two most recent frames. This value is expected to flucuate significantly.
@@ -1188,13 +1188,14 @@ def dashcam_output_handler(directory, device, width, height, framerate):
 
 
         # ===== Check to see if any frames need to be written =====
-        for frame in frames_to_write[device]: # Iterate through each frame that needs to be written.
-            output.write(frame)
-        frames_to_write[device] = [] # Clear the frame buffer.
+        if (frames_to_write[device] is not None):
+            output.write(frames_to_write[device])
+            frames_to_write[device] = None
 
     # The main output loop has been exited, since Predator is terminating.
-    for frame in frames_to_write[device]: # Iterate through each frame that needs to be written.
-        output.write(frame)
+    if (frames_to_write[device] is not None):
+        output.write(frames_to_write[device])
+        frames_to_write[device] = None
     output = None # Release the output after exiting the main loop.
 
 
@@ -1204,8 +1205,4 @@ def dashcam_output_handler(directory, device, width, height, framerate):
 
 def write_frame(frame, device):
     global frames_to_write
-    frames_to_write[device].append(frame) # Add the frame to the queue of frames to write.
-    if (len(frames_to_write) > int(config["developer"]["dashcam_saving_queue_overflow"])):
-        display_message("The queue of dash-cam frames to save to disk has overflowed on '" + str(device) + "'! It is likely that the capture device is outrunning the storage medium. Consider decreasing the maximum frame-rate.", 2)
-
-
+    frames_to_write[device] = frame
